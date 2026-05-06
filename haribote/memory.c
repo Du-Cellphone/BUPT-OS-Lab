@@ -1,146 +1,261 @@
-/* ƒƒ‚ƒŠŠÖŒW */
+/* ãƒ¡ãƒ¢ãƒªé–¢ä¿‚ */
 
 #include "bootpack.h"
 
-#define EFLAGS_AC_BIT		0x00040000
-#define CR0_CACHE_DISABLE	0x60000000
+#define EFLAGS_AC_BIT 0x00040000
+#define CR0_CACHE_DISABLE 0x60000000
+#define CR0_PAGING_BIT 0x80000000
+#define PTE_PRESENT 0x001
+#define PTE_RW 0x002
+#define PDE_ATTR (PTE_PRESENT | PTE_RW | 0x004) /* 0x007 */
+#define PTE_ATTR (PTE_PRESENT | PTE_RW | 0x004) /* 0x007 */
 
 unsigned int memtest(unsigned int start, unsigned int end)
 {
 	char flg486 = 0;
 	unsigned int eflg, cr0, i;
 
-	/* 386‚©A486ˆÈ~‚È‚Ì‚©‚ÌŠm”F */
+	/* 386ã‹ã€486ä»¥é™ãªã®ã‹ã®ç¢ºèª */
 	eflg = io_load_eflags();
 	eflg |= EFLAGS_AC_BIT; /* AC-bit = 1 */
 	io_store_eflags(eflg);
 	eflg = io_load_eflags();
-	if ((eflg & EFLAGS_AC_BIT) != 0) { /* 386‚Å‚ÍAC=1‚É‚µ‚Ä‚à©“®‚Å0‚É–ß‚Á‚Ä‚µ‚Ü‚¤ */
+	if ((eflg & EFLAGS_AC_BIT) != 0)
+	{ /* 386ã§ã¯AC=1ã«ã—ã¦ã‚‚è‡ªå‹•ã§0ã«æˆ»ã£ã¦ã—ã¾ã† */
 		flg486 = 1;
 	}
 	eflg &= ~EFLAGS_AC_BIT; /* AC-bit = 0 */
 	io_store_eflags(eflg);
 
-	if (flg486 != 0) {
+	if (flg486 != 0)
+	{
 		cr0 = load_cr0();
-		cr0 |= CR0_CACHE_DISABLE; /* ƒLƒƒƒbƒVƒ…‹Ö~ */
+		cr0 |= CR0_CACHE_DISABLE; /* ã‚­ãƒ£ãƒƒã‚·ãƒ¥ç¦æ­¢ */
 		store_cr0(cr0);
 	}
 
 	i = memtest_sub(start, end);
 
-	if (flg486 != 0) {
+	if (flg486 != 0)
+	{
 		cr0 = load_cr0();
-		cr0 &= ~CR0_CACHE_DISABLE; /* ƒLƒƒƒbƒVƒ…‹–‰Â */
+		cr0 &= ~CR0_CACHE_DISABLE; /* ã‚­ãƒ£ãƒƒã‚·ãƒ¥è¨±å¯ */
 		store_cr0(cr0);
 	}
 
 	return i;
 }
 
+unsigned int init_paging(unsigned int memtotal)
+{
+	int i, j;
+	unsigned int *page_dir = (unsigned int *)PAGE_DIR_ADDR;
+	unsigned int *page_table;
+	unsigned int num_tables;
+	unsigned int cr0;
+	unsigned int vram_addr, vram_size;
+	int vram_pd_start, vram_pd_end;
+
+	/* è®¡ç®—éœ€è¦çš„é¡µè¡¨æ•°é‡ï¼ˆæ¯ä¸ªé¡µè¡¨æ˜ å°„4MBï¼‰ */
+	num_tables = (memtotal + 0x3fffff) / 0x400000;
+	if (num_tables > 128)
+	{
+		num_tables = 128; /* æœ€å¤šæ˜ å°„512MB */
+	}
+	if (num_tables < 1)
+	{
+		num_tables = 1; /* è‡³å°‘æ˜ å°„å‰4MBï¼ˆå†…æ ¸æ‰€åœ¨åŒºåŸŸï¼‰ */
+	}
+
+	/* æ¸…ç©ºé¡µç›®å½• */
+	for (i = 0; i < 1024; i++)
+	{
+		page_dir[i] = 0;
+	}
+
+	/* åˆ›å»ºé¡µè¡¨ï¼Œå»ºç«‹ä¸€ä¸€æ˜ å°„å’Œé«˜ç«¯æ˜ å°„ */
+	/* ä¸€ä¸€æ˜ å°„ï¼šè™šæ‹Ÿåœ°å€=ç‰©ç†åœ°å€ï¼ˆç”¨äºè¿‡æ¸¡ï¼‰ */
+	/* é«˜ç«¯æ˜ å°„ï¼šè™šæ‹Ÿåœ°å€=ç‰©ç†åœ°å€+0xC0000000 */
+	page_table = (unsigned int *)PAGE_TABLE_ADDR;
+	for (i = 0; i < num_tables; i++)
+	{
+		for (j = 0; j < 1024; j++)
+		{
+			page_table[j] = (i * 0x400000 + j * 0x1000) | PTE_ATTR;
+		}
+		/* PDE[i]ï¼šä¸€ä¸€æ˜ å°„ï¼Œè™šæ‹Ÿ i*4MB â†’ ç‰©ç† i*4MB */
+		page_dir[i] = ((unsigned int)page_table) | PDE_ATTR;
+		/* PDE[768+i]ï¼šé«˜ç«¯æ˜ å°„ï¼Œè™šæ‹Ÿ 0xC0000000+i*4MB â†’ ç‰©ç† i*4MB */
+		page_dir[768 + i] = ((unsigned int)page_table) | PDE_ATTR;
+		page_table += 1024; /* ç§»åŠ¨åˆ°ä¸‹ä¸€ä¸ªé¡µè¡¨ */
+	}
+
+	/* æ˜ å°„VRAMåŒºåŸŸï¼ˆVBEæ¨¡å¼ä¸‹VRAMå¯èƒ½åœ¨0xe0000000ç­‰é«˜åœ°å€ï¼‰ */
+	vram_addr = *((unsigned int *)0x0ff8);
+	vram_size = (unsigned int)(*((unsigned short *)0x0ff4)) * (unsigned int)(*((unsigned short *)0x0ff6));
+	vram_pd_start = (int)(vram_addr >> 22);
+	vram_pd_end = (int)((vram_addr + vram_size + 0x3fffff) >> 22);
+	for (i = vram_pd_start; i < vram_pd_end; i++)
+	{
+		if (page_dir[i] == 0)
+		{
+			page_table = (unsigned int *)(PAGE_TABLE_ADDR + num_tables * 0x1000);
+			for (j = 0; j < 1024; j++)
+			{
+				page_table[j] = (i * 0x400000 + j * 0x1000) | PTE_ATTR;
+			}
+			page_dir[i] = ((unsigned int)page_table) | PDE_ATTR;
+			num_tables++;
+		}
+	}
+
+	/* å°†é¡µç›®å½•åœ°å€åŠ è½½åˆ°CR3 */
+	store_cr3(PAGE_DIR_ADDR);
+
+	/* è®¾ç½®CR0çš„bit31ï¼Œå¯ç”¨åˆ†é¡µ */
+	cr0 = load_cr0();
+	cr0 |= CR0_PAGING_BIT;
+	store_cr0(cr0);
+
+	/* è¿”å›é¡µè¡¨å ç”¨å†…å­˜çš„æœ«å°¾åœ°å€ */
+	return PAGE_TABLE_ADDR + num_tables * 0x1000;
+}
+
 void memman_init(struct MEMMAN *man)
 {
-	man->frees = 0;			/* ‚ ‚«î•ñ‚ÌŒÂ” */
-	man->maxfrees = 0;		/* ó‹µŠÏ@—pFfrees‚ÌÅ‘å’l */
-	man->lostsize = 0;		/* ‰ğ•ú‚É¸”s‚µ‚½‡ŒvƒTƒCƒY */
-	man->losts = 0;			/* ‰ğ•ú‚É¸”s‚µ‚½‰ñ” */
+	man->frees = 0;	   /* ã‚ãæƒ…å ±ã®å€‹æ•° */
+	man->maxfrees = 0; /* çŠ¶æ³è¦³å¯Ÿç”¨ï¼šfreesã®æœ€å¤§å€¤ */
+	man->lostsize = 0; /* è§£æ”¾ã«å¤±æ•—ã—ãŸåˆè¨ˆã‚µã‚¤ã‚º */
+	man->losts = 0;	   /* è§£æ”¾ã«å¤±æ•—ã—ãŸå›æ•° */
 	return;
 }
 
 unsigned int memman_total(struct MEMMAN *man)
-/* ‚ ‚«ƒTƒCƒY‚Ì‡Œv‚ğ•ñ */
+/* ã‚ãã‚µã‚¤ã‚ºã®åˆè¨ˆã‚’å ±å‘Š */
 {
 	unsigned int i, t = 0;
-	for (i = 0; i < man->frees; i++) {
+	for (i = 0; i < man->frees; i++)
+	{
 		t += man->free[i].size;
 	}
 	return t;
 }
 
 unsigned int memman_alloc(struct MEMMAN *man, unsigned int size)
-/* Šm•Û */
+/* åˆ†é…ï¼ˆBest-Fit æœ€ä½³é€‚åº”ç®—æ³•ï¼šé€‰æ‹©æ»¡è¶³å¤§å°è¦æ±‚çš„æœ€å°ç©ºé—²å—ï¼‰ */
 {
 	unsigned int i, a;
-	for (i = 0; i < man->frees; i++) {
-		if (man->free[i].size >= size) {
-			/* \•ª‚ÈL‚³‚Ì‚ ‚«‚ğ”­Œ© */
-			a = man->free[i].addr;
-			man->free[i].addr += size;
-			man->free[i].size -= size;
-			if (man->free[i].size == 0) {
-				/* free[i]‚ª‚È‚­‚È‚Á‚½‚Ì‚Å‘O‚Ö‚Â‚ß‚é */
-				man->frees--;
-				for (; i < man->frees; i++) {
-					man->free[i] = man->free[i + 1]; /* \‘¢‘Ì‚Ì‘ã“ü */
-				}
+	int best_i = -1;					 /* æœ€ä½³å—çš„ç´¢å¼• */
+	unsigned int best_size = 0xffffffff; /* è®°å½•æœ€å°æ»¡è¶³æ¡ä»¶çš„å—å¤§å° */
+
+	/* éå†æ‰€æœ‰ç©ºé—²å—ï¼Œæ‰¾åˆ°æ»¡è¶³å¤§å°è¦æ±‚çš„æœ€å°å— */
+	for (i = 0; i < man->frees; i++)
+	{
+		if (man->free[i].size >= size && man->free[i].size < best_size)
+		{
+			best_i = i;
+			best_size = man->free[i].size;
+			if (man->free[i].size == size)
+			{
+				break;
 			}
-			return a;
 		}
 	}
-	return 0; /* ‚ ‚«‚ª‚È‚¢ */
+
+	if (best_i == -1)
+	{
+		return 0; /* æ²¡æœ‰å¯ç”¨ç©ºé—´ */
+	}
+
+	/* ä»æ‰¾åˆ°çš„æœ€ä½³å—ä¸­åˆ†é… */
+	a = man->free[best_i].addr;
+	man->free[best_i].addr += size;
+	man->free[best_i].size -= size;
+	if (man->free[best_i].size == 0)
+	{
+		/* å¦‚æœfree[best_i]å˜æˆäº†0ï¼Œå°±å‡æ‰ä¸€æ¡å¯ç”¨ä¿¡æ¯ */
+		man->frees--;
+		for (i = best_i; i < man->frees; i++)
+		{
+			man->free[i] = man->free[i + 1]; /* ä»£å…¥ç»“æ„ä½“ */
+		}
+	}
+	return a;
 }
 
 int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size)
-/* ‰ğ•ú */
+/* è§£æ”¾ */
 {
 	int i, j;
-	/* ‚Ü‚Æ‚ß‚â‚·‚³‚ğl‚¦‚é‚ÆAfree[]‚ªaddr‡‚É•À‚ñ‚Å‚¢‚é‚Ù‚¤‚ª‚¢‚¢ */
-	/* ‚¾‚©‚ç‚Ü‚¸A‚Ç‚±‚É“ü‚ê‚é‚×‚«‚©‚ğŒˆ‚ß‚é */
-	for (i = 0; i < man->frees; i++) {
-		if (man->free[i].addr > addr) {
+	/* ã¾ã¨ã‚ã‚„ã™ã•ã‚’è€ƒãˆã‚‹ã¨ã€free[]ãŒaddré †ã«ä¸¦ã‚“ã§ã„ã‚‹ã»ã†ãŒã„ã„ */
+	/* ã ã‹ã‚‰ã¾ãšã€ã©ã“ã«å…¥ã‚Œã‚‹ã¹ãã‹ã‚’æ±ºã‚ã‚‹ */
+	for (i = 0; i < man->frees; i++)
+	{
+		if (man->free[i].addr > addr)
+		{
 			break;
 		}
 	}
 	/* free[i - 1].addr < addr < free[i].addr */
-	if (i > 0) {
-		/* ‘O‚ª‚ ‚é */
-		if (man->free[i - 1].addr + man->free[i - 1].size == addr) {
-			/* ‘O‚Ì‚ ‚«—Ìˆæ‚É‚Ü‚Æ‚ß‚ç‚ê‚é */
+	if (i > 0)
+	{
+		/* å‰ãŒã‚ã‚‹ */
+		if (man->free[i - 1].addr + man->free[i - 1].size == addr)
+		{
+			/* å‰ã®ã‚ãé ˜åŸŸã«ã¾ã¨ã‚ã‚‰ã‚Œã‚‹ */
 			man->free[i - 1].size += size;
-			if (i < man->frees) {
-				/* Œã‚ë‚à‚ ‚é */
-				if (addr + size == man->free[i].addr) {
-					/* ‚È‚ñ‚ÆŒã‚ë‚Æ‚à‚Ü‚Æ‚ß‚ç‚ê‚é */
+			if (i < man->frees)
+			{
+				/* å¾Œã‚ã‚‚ã‚ã‚‹ */
+				if (addr + size == man->free[i].addr)
+				{
+					/* ãªã‚“ã¨å¾Œã‚ã¨ã‚‚ã¾ã¨ã‚ã‚‰ã‚Œã‚‹ */
 					man->free[i - 1].size += man->free[i].size;
-					/* man->free[i]‚Ìíœ */
-					/* free[i]‚ª‚È‚­‚È‚Á‚½‚Ì‚Å‘O‚Ö‚Â‚ß‚é */
+					/* man->free[i]ã®å‰Šé™¤ */
+					/* free[i]ãŒãªããªã£ãŸã®ã§å‰ã¸ã¤ã‚ã‚‹ */
 					man->frees--;
-					for (; i < man->frees; i++) {
-						man->free[i] = man->free[i + 1]; /* \‘¢‘Ì‚Ì‘ã“ü */
+					for (; i < man->frees; i++)
+					{
+						man->free[i] = man->free[i + 1]; /* æ§‹é€ ä½“ã®ä»£å…¥ */
 					}
 				}
 			}
-			return 0; /* ¬Œ÷I—¹ */
+			return 0; /* æˆåŠŸçµ‚äº† */
 		}
 	}
-	/* ‘O‚Æ‚Í‚Ü‚Æ‚ß‚ç‚ê‚È‚©‚Á‚½ */
-	if (i < man->frees) {
-		/* Œã‚ë‚ª‚ ‚é */
-		if (addr + size == man->free[i].addr) {
-			/* Œã‚ë‚Æ‚Í‚Ü‚Æ‚ß‚ç‚ê‚é */
+	/* å‰ã¨ã¯ã¾ã¨ã‚ã‚‰ã‚Œãªã‹ã£ãŸ */
+	if (i < man->frees)
+	{
+		/* å¾Œã‚ãŒã‚ã‚‹ */
+		if (addr + size == man->free[i].addr)
+		{
+			/* å¾Œã‚ã¨ã¯ã¾ã¨ã‚ã‚‰ã‚Œã‚‹ */
 			man->free[i].addr = addr;
 			man->free[i].size += size;
-			return 0; /* ¬Œ÷I—¹ */
+			return 0; /* æˆåŠŸçµ‚äº† */
 		}
 	}
-	/* ‘O‚É‚àŒã‚ë‚É‚à‚Ü‚Æ‚ß‚ç‚ê‚È‚¢ */
-	if (man->frees < MEMMAN_FREES) {
-		/* free[i]‚æ‚èŒã‚ë‚ğAŒã‚ë‚Ö‚¸‚ç‚µ‚ÄA‚·‚«‚Ü‚ğì‚é */
-		for (j = man->frees; j > i; j--) {
+	/* å‰ã«ã‚‚å¾Œã‚ã«ã‚‚ã¾ã¨ã‚ã‚‰ã‚Œãªã„ */
+	if (man->frees < MEMMAN_FREES)
+	{
+		/* free[i]ã‚ˆã‚Šå¾Œã‚ã‚’ã€å¾Œã‚ã¸ãšã‚‰ã—ã¦ã€ã™ãã¾ã‚’ä½œã‚‹ */
+		for (j = man->frees; j > i; j--)
+		{
 			man->free[j] = man->free[j - 1];
 		}
 		man->frees++;
-		if (man->maxfrees < man->frees) {
-			man->maxfrees = man->frees; /* Å‘å’l‚ğXV */
+		if (man->maxfrees < man->frees)
+		{
+			man->maxfrees = man->frees; /* æœ€å¤§å€¤ã‚’æ›´æ–° */
 		}
 		man->free[i].addr = addr;
 		man->free[i].size = size;
-		return 0; /* ¬Œ÷I—¹ */
+		return 0; /* æˆåŠŸçµ‚äº† */
 	}
-	/* Œã‚ë‚É‚¸‚ç‚¹‚È‚©‚Á‚½ */
+	/* å¾Œã‚ã«ãšã‚‰ã›ãªã‹ã£ãŸ */
 	man->losts++;
 	man->lostsize += size;
-	return -1; /* ¸”sI—¹ */
+	return -1; /* å¤±æ•—çµ‚äº† */
 }
 
 unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size)

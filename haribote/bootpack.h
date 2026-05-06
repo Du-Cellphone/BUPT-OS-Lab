@@ -1,14 +1,15 @@
 /* asmhead.nas */
-struct BOOTINFO { /* 0x0ff0-0x0fff */
-	char cyls; /* ƒu[ƒgƒZƒNƒ^‚Í‚Ç‚±‚Ü‚ÅƒfƒBƒXƒN‚ğ“Ç‚ñ‚¾‚Ì‚© */
-	char leds; /* ƒu[ƒg‚ÌƒL[ƒ{[ƒh‚ÌLED‚Ìó‘Ô */
-	char vmode; /* ƒrƒfƒIƒ‚[ƒh  ‰½ƒrƒbƒgƒJƒ‰[‚© */
+struct BOOTINFO
+{				/* 0x0ff0-0x0fff */
+	char cyls;	/* ãƒ–ãƒ¼ãƒˆã‚»ã‚¯ã‚¿ã¯ã©ã“ã¾ã§ãƒ‡ã‚£ã‚¹ã‚¯ã‚’èª­ã‚“ã ã®ã‹ */
+	char leds;	/* ãƒ–ãƒ¼ãƒˆæ™‚ã®ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã®LEDã®çŠ¶æ…‹ */
+	char vmode; /* ãƒ“ãƒ‡ã‚ªãƒ¢ãƒ¼ãƒ‰  ä½•ãƒ“ãƒƒãƒˆã‚«ãƒ©ãƒ¼ã‹ */
 	char reserve;
-	short scrnx, scrny; /* ‰æ–Ê‰ğ‘œ“x */
+	short scrnx, scrny; /* ç”»é¢è§£åƒåº¦ */
 	char *vram;
 };
-#define ADR_BOOTINFO	0x00000ff0
-#define ADR_DISKIMG		0x00100000
+#define ADR_BOOTINFO 0x00000ff0
+#define ADR_DISKIMG 0x00100000
 
 /* naskfunc.nas */
 void io_hlt(void);
@@ -23,6 +24,8 @@ void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
 int load_cr0(void);
 void store_cr0(int cr0);
+void store_cr3(int cr3);
+void switch_to_high_half(void);
 void load_tr(int tr);
 void asm_inthandler0c(void);
 void asm_inthandler0d(void);
@@ -37,7 +40,8 @@ void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
 void asm_end_app(void);
 
 /* fifo.c */
-struct FIFO32 {
+struct FIFO32
+{
 	int *buf;
 	int p, q, size, free, flags;
 	struct TASK *task;
@@ -56,74 +60,78 @@ void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
 void init_mouse_cursor8(char *mouse, char bc);
 void putblock8_8(char *vram, int vxsize, int pxsize,
-	int pysize, int px0, int py0, char *buf, int bxsize);
-#define COL8_000000		0
-#define COL8_FF0000		1
-#define COL8_00FF00		2
-#define COL8_FFFF00		3
-#define COL8_0000FF		4
-#define COL8_FF00FF		5
-#define COL8_00FFFF		6
-#define COL8_FFFFFF		7
-#define COL8_C6C6C6		8
-#define COL8_840000		9
-#define COL8_008400		10
-#define COL8_848400		11
-#define COL8_000084		12
-#define COL8_840084		13
-#define COL8_008484		14
-#define COL8_848484		15
+				 int pysize, int px0, int py0, char *buf, int bxsize);
+#define COL8_000000 0
+#define COL8_FF0000 1
+#define COL8_00FF00 2
+#define COL8_FFFF00 3
+#define COL8_0000FF 4
+#define COL8_FF00FF 5
+#define COL8_00FFFF 6
+#define COL8_FFFFFF 7
+#define COL8_C6C6C6 8
+#define COL8_840000 9
+#define COL8_008400 10
+#define COL8_848400 11
+#define COL8_000084 12
+#define COL8_840084 13
+#define COL8_008484 14
+#define COL8_848484 15
 
 /* dsctbl.c */
-struct SEGMENT_DESCRIPTOR {
+struct SEGMENT_DESCRIPTOR
+{
 	short limit_low, base_low;
 	char base_mid, access_right;
 	char limit_high, base_high;
 };
-struct GATE_DESCRIPTOR {
+struct GATE_DESCRIPTOR
+{
 	short offset_low, selector;
 	char dw_count, access_right;
 	short offset_high;
 };
 void init_gdtidt(void);
+void init_gdt_high(void);
 void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
 void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
-#define ADR_IDT			0x0026f800
-#define LIMIT_IDT		0x000007ff
-#define ADR_GDT			0x00270000
-#define LIMIT_GDT		0x0000ffff
-#define ADR_BOTPAK		0x00280000
-#define LIMIT_BOTPAK	0x0007ffff
-#define AR_DATA32_RW	0x4092
-#define AR_CODE32_ER	0x409a
-#define AR_LDT			0x0082
-#define AR_TSS32		0x0089
-#define AR_INTGATE32	0x008e
+#define ADR_IDT 0x0026f800
+#define LIMIT_IDT 0x000007ff
+#define ADR_GDT 0x00270000
+#define LIMIT_GDT 0x0000ffff
+#define ADR_BOTPAK 0x00280000
+#define LIMIT_BOTPAK 0x0007ffff
+#define AR_DATA32_RW 0x4092
+#define AR_CODE32_ER 0x409a
+#define AR_LDT 0x0082
+#define AR_TSS32 0x0089
+#define AR_INTGATE32 0x008e
 
 /* int.c */
 void init_pic(void);
-#define PIC0_ICW1		0x0020
-#define PIC0_OCW2		0x0020
-#define PIC0_IMR		0x0021
-#define PIC0_ICW2		0x0021
-#define PIC0_ICW3		0x0021
-#define PIC0_ICW4		0x0021
-#define PIC1_ICW1		0x00a0
-#define PIC1_OCW2		0x00a0
-#define PIC1_IMR		0x00a1
-#define PIC1_ICW2		0x00a1
-#define PIC1_ICW3		0x00a1
-#define PIC1_ICW4		0x00a1
+#define PIC0_ICW1 0x0020
+#define PIC0_OCW2 0x0020
+#define PIC0_IMR 0x0021
+#define PIC0_ICW2 0x0021
+#define PIC0_ICW3 0x0021
+#define PIC0_ICW4 0x0021
+#define PIC1_ICW1 0x00a0
+#define PIC1_OCW2 0x00a0
+#define PIC1_IMR 0x00a1
+#define PIC1_ICW2 0x00a1
+#define PIC1_ICW3 0x00a1
+#define PIC1_ICW4 0x00a1
 
 /* keyboard.c */
 void inthandler21(int *esp);
 void wait_KBC_sendready(void);
 void init_keyboard(struct FIFO32 *fifo, int data0);
-#define PORT_KEYDAT		0x0060
-#define PORT_KEYCMD		0x0064
+#define PORT_KEYDAT 0x0060
+#define PORT_KEYCMD 0x0064
 
 /* mouse.c */
-struct MOUSE_DEC {
+struct MOUSE_DEC
+{
 	unsigned char buf[3], phase;
 	int x, y, btn;
 };
@@ -132,16 +140,22 @@ void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
 int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 
 /* memory.c */
-#define MEMMAN_FREES		4090	/* ‚±‚ê‚Å–ñ32KB */
-#define MEMMAN_ADDR			0x003c0000
-struct FREEINFO {	/* ‚ ‚«î•ñ */
+#define MEMMAN_FREES 4090 /* ã“ã‚Œã§ç´„32KB */
+#define MEMMAN_ADDR 0x003c0000
+#define PAGE_DIR_ADDR 0x00001000
+#define PAGE_TABLE_ADDR 0x00002000
+#define KERNEL_BASE 0xC0000000
+struct FREEINFO
+{ /* ã‚ãæƒ…å ± */
 	unsigned int addr, size;
 };
-struct MEMMAN {		/* ƒƒ‚ƒŠŠÇ— */
+struct MEMMAN
+{ /* ãƒ¡ãƒ¢ãƒªç®¡ç† */
 	int frees, maxfrees, lostsize, losts;
 	struct FREEINFO free[MEMMAN_FREES];
 };
 unsigned int memtest(unsigned int start, unsigned int end);
+unsigned int init_paging(unsigned int memtotal);
 void memman_init(struct MEMMAN *man);
 unsigned int memman_total(struct MEMMAN *man);
 unsigned int memman_alloc(struct MEMMAN *man, unsigned int size);
@@ -150,14 +164,16 @@ unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size);
 int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size);
 
 /* sheet.c */
-#define MAX_SHEETS		256
-struct SHEET {
+#define MAX_SHEETS 256
+struct SHEET
+{
 	unsigned char *buf;
 	int bxsize, bysize, vx0, vy0, col_inv, height, flags;
 	struct SHTCTL *ctl;
 	struct TASK *task;
 };
-struct SHTCTL {
+struct SHTCTL
+{
 	unsigned char *vram, *map;
 	int xsize, ysize, top;
 	struct SHEET *sheets[MAX_SHEETS];
@@ -172,15 +188,17 @@ void sheet_slide(struct SHEET *sht, int vx0, int vy0);
 void sheet_free(struct SHEET *sht);
 
 /* timer.c */
-#define MAX_TIMER		500
-struct TIMER {
+#define MAX_TIMER 500
+struct TIMER
+{
 	struct TIMER *next;
 	unsigned int timeout;
 	char flags, flags2;
 	struct FIFO32 *fifo;
 	int data;
 };
-struct TIMERCTL {
+struct TIMERCTL
+{
 	unsigned int count, next;
 	struct TIMER *t0;
 	struct TIMER timers0[MAX_TIMER];
@@ -196,18 +214,20 @@ int timer_cancel(struct TIMER *timer);
 void timer_cancelall(struct FIFO32 *fifo);
 
 /* mtask.c */
-#define MAX_TASKS		1000	/* Å‘åƒ^ƒXƒN” */
-#define TASK_GDT0		3		/* TSS‚ğGDT‚Ì‰½”Ô‚©‚çŠ„‚è“–‚Ä‚é‚Ì‚© */
-#define MAX_TASKS_LV	100
-#define MAX_TASKLEVELS	10
-struct TSS32 {
+#define MAX_TASKS 1000 /* æœ€å¤§ã‚¿ã‚¹ã‚¯æ•° */
+#define TASK_GDT0 3	   /* TSSã‚’GDTã®ä½•ç•ªã‹ã‚‰å‰²ã‚Šå½“ã¦ã‚‹ã®ã‹ */
+#define MAX_TASKS_LV 100
+#define MAX_TASKLEVELS 10
+struct TSS32
+{
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
 	int es, cs, ss, ds, fs, gs;
 	int ldtr, iomap;
 };
-struct TASK {
-	int sel, flags; /* sel‚ÍGDT‚Ì”Ô†‚Ì‚±‚Æ */
+struct TASK
+{
+	int sel, flags; /* selã¯GDTã®ç•ªå·ã®ã“ã¨ */
 	int level, priority;
 	struct FIFO32 fifo;
 	struct TSS32 tss;
@@ -219,14 +239,16 @@ struct TASK {
 	char *cmdline;
 	unsigned char langmode, langbyte1;
 };
-struct TASKLEVEL {
-	int running; /* “®ì‚µ‚Ä‚¢‚éƒ^ƒXƒN‚Ì” */
-	int now; /* Œ»İ“®ì‚µ‚Ä‚¢‚éƒ^ƒXƒN‚ª‚Ç‚ê‚¾‚©•ª‚©‚é‚æ‚¤‚É‚·‚é‚½‚ß‚Ì•Ï” */
+struct TASKLEVEL
+{
+	int running; /* å‹•ä½œã—ã¦ã„ã‚‹ã‚¿ã‚¹ã‚¯ã®æ•° */
+	int now;	 /* ç¾åœ¨å‹•ä½œã—ã¦ã„ã‚‹ã‚¿ã‚¹ã‚¯ãŒã©ã‚Œã ã‹åˆ†ã‹ã‚‹ã‚ˆã†ã«ã™ã‚‹ãŸã‚ã®å¤‰æ•° */
 	struct TASK *tasks[MAX_TASKS_LV];
 };
-struct TASKCTL {
-	int now_lv; /* Œ»İ“®ì’†‚ÌƒŒƒxƒ‹ */
-	char lv_change; /* Ÿ‰ñƒ^ƒXƒNƒXƒCƒbƒ`‚Ì‚Æ‚«‚ÉAƒŒƒxƒ‹‚à•Ï‚¦‚½‚Ù‚¤‚ª‚¢‚¢‚©‚Ç‚¤‚© */
+struct TASKCTL
+{
+	int now_lv;		/* ç¾åœ¨å‹•ä½œä¸­ã®ãƒ¬ãƒ™ãƒ« */
+	char lv_change; /* æ¬¡å›ã‚¿ã‚¹ã‚¯ã‚¹ã‚¤ãƒƒãƒã®ã¨ãã«ã€ãƒ¬ãƒ™ãƒ«ã‚‚å¤‰ãˆãŸã»ã†ãŒã„ã„ã‹ã©ã†ã‹ */
 	struct TASKLEVEL level[MAX_TASKLEVELS];
 	struct TASK tasks0[MAX_TASKS];
 };
@@ -247,12 +269,14 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 void change_wtitle8(struct SHEET *sht, char act);
 
 /* console.c */
-struct CONSOLE {
+struct CONSOLE
+{
 	struct SHEET *sht;
 	int cur_x, cur_y, cur_c;
 	struct TIMER *timer;
 };
-struct FILEHANDLE {
+struct FILEHANDLE
+{
 	char *buf;
 	int size;
 	int pos;
@@ -277,7 +301,8 @@ int *inthandler0c(int *esp);
 void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 
 /* file.c */
-struct FILEINFO {
+struct FILEINFO
+{
 	unsigned char name[8], ext[3], type;
 	char reserve[10];
 	unsigned short time, date, clustno;
