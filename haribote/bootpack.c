@@ -57,6 +57,19 @@ void HariMain(void)
     io_out8(PIC1_IMR, 0xef); /* マウスを許可(11101111) */
     fifo32_init(&keycmd, 32, keycmd_buf, 0);
 
+    struct TIMER *timer4, *timer5, *timer6;
+    timer4 = timer_alloc();
+    timer_init(timer4, &fifo, 205); /* 5秒 */
+    timer_settime(timer4, 500);
+
+    timer5 = timer_alloc();
+    timer_init(timer5, &fifo, 207); /* 7秒 */
+    timer_settime(timer5, 700);
+
+    timer6 = timer_alloc();
+    timer_init(timer6, &fifo, 202); /* 1秒 */
+    timer_settime(timer6, 100);
+
     memtotal = memtest(0x00400000, 0xbfffffff);
     pt_end   = init_paging(memtotal); /* 启动分页，建立一一映射和高端映射 */
 
