@@ -7,12 +7,12 @@ IMGTOL   = $(TOOLPATH)imgtol.com
 COPY     = copy
 DEL      = del
 
-# ƒfƒtƒHƒ‹ƒg“®ì
+# ï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½
 
 default :
 	$(MAKE) haribote.img
 
-# ƒtƒ@ƒCƒ‹¶¬‹K‘¥
+# ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Kï¿½ï¿½
 
 haribote.img : haribote/ipl09.bin haribote/haribote.sys Makefile \
 		a/a.hrb hello3/hello3.hrb hello4/hello4.hrb hello5/hello5.hrb \
@@ -24,7 +24,7 @@ haribote.img : haribote/ipl09.bin haribote/haribote.sys Makefile \
 		type/type.hrb iroha/iroha.hrb chklang/chklang.hrb \
 		notrec/notrec.hrb bball/bball.hrb invader/invader.hrb \
 		calc/calc.hrb tview/tview.hrb mmlplay/mmlplay.hrb gview/gview.hrb \
-		ldtvar/ldtvar.hrb
+		ldtvar/ldtvar.hrb synctest/synctest.hrb prodcon/prodcon.hrb
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
 		wbinimg src:haribote/ipl09.bin len:512 from:0 to:0 \
 		copy from:haribote/haribote.sys to:@: \
@@ -53,6 +53,8 @@ haribote.img : haribote/ipl09.bin haribote/haribote.sys Makefile \
 		copy from:iroha/iroha.hrb to:@: \
 		copy from:chklang/chklang.hrb to:@: \
 		copy from:ldtvar/ldtvar.hrb to:@: \
+		copy from:synctest/synctest.hrb to:@: \
+		copy from:prodcon/prodcon.hrb to:@: \
 		copy from:euc.txt to:@: \
 		copy from:notrec/notrec.hrb to:@: \
 		copy from:bball/bball.hrb to:@: \
@@ -70,7 +72,7 @@ haribote.img : haribote/ipl09.bin haribote/haribote.sys Makefile \
 		copy from:nihongo/nihongo.fnt to:@: \
 		imgout:haribote.img
 
-# ƒRƒ}ƒ“ƒh
+# ï¿½Rï¿½}ï¿½ï¿½ï¿½h
 
 run :
 	$(MAKE) haribote.img
@@ -114,6 +116,8 @@ full :
 	$(MAKE) -C mmlplay
 	$(MAKE) -C gview
 	$(MAKE) -C ldtvar
+	$(MAKE) -C synctest
+	$(MAKE) -C prodcon
 	$(MAKE) haribote.img
 
 run_full :
@@ -130,7 +134,7 @@ run_os :
 	$(MAKE) run
 
 clean :
-# ‰½‚à‚µ‚È‚¢
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½
 
 src_only :
 	$(MAKE) clean
@@ -169,6 +173,8 @@ clean_full :
 	$(MAKE) -C mmlplay		clean
 	$(MAKE) -C gview		clean
 	$(MAKE) -C ldtvar		clean
+	$(MAKE) -C synctest		clean
+	$(MAKE) -C prodcon		clean
 
 src_only_full :
 	$(MAKE) -C haribote		src_only
@@ -203,6 +209,8 @@ src_only_full :
 	$(MAKE) -C mmlplay		src_only
 	$(MAKE) -C gview		src_only
 	$(MAKE) -C ldtvar		src_only
+	$(MAKE) -C synctest		src_only
+	$(MAKE) -C prodcon		src_only
 	-$(DEL) haribote.img
 
 refresh :

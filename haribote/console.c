@@ -2,6 +2,7 @@
 
 #include "bootpack.h"
 #include "memfs.h"
+#include "sync.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -1160,6 +1161,9 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
     else if (edx == 29)
     {
         reg[7] = task->ds_base + eax;
+    }
+    if (edx >= 30 && edx <= 39) {
+        return hrb_api_sync(edx, eax, ebx, ecx, reg, ds_base);
     }
     return 0;
 }

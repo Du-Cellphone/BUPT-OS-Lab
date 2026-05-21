@@ -1,6 +1,6 @@
 OBJS_BOOTPACK = bootpack.obj naskfunc.obj hankaku.obj graphic.obj dsctbl.obj \
 		int.obj fifo.obj keyboard.obj mouse.obj memory.obj sheet.obj timer.obj \
-		mtask.obj window.obj console.obj file.obj tek.obj memfs.obj
+		mtask.obj window.obj console.obj file.obj tek.obj memfs.obj sync.obj prodcons.obj
 
 TOOLPATH = ../../z_tools/
 INCPATH  = ../../z_tools/haribote/
@@ -20,13 +20,13 @@ GOLIB    = $(TOOLPATH)golib00.exe
 COPY     = copy
 DEL      = del
 
-# ƒfƒtƒHƒ‹ƒg“®ì
+# ï¿½fï¿½tï¿½Hï¿½ï¿½ï¿½gï¿½ï¿½ï¿½ï¿½
 
 default :
 	$(MAKE) ipl09.bin
 	$(MAKE) haribote.sys
 
-# ƒtƒ@ƒCƒ‹¶¬‹K‘¥
+# ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Kï¿½ï¿½
 
 ipl09.bin : ipl09.nas Makefile
 	$(NASK) ipl09.nas ipl09.bin ipl09.lst
@@ -51,7 +51,7 @@ bootpack.hrb : bootpack.bim Makefile
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	copy /B asmhead.bin+bootpack.hrb haribote.sys
 
-# ˆê”Ê‹K‘¥
+# ï¿½ï¿½Ê‹Kï¿½ï¿½
 
 %.gas : %.c bootpack.h Makefile
 	$(CC1) -o $*.gas $*.c
@@ -62,7 +62,7 @@ haribote.sys : asmhead.bin bootpack.hrb Makefile
 %.obj : %.nas Makefile
 	$(NASK) $*.nas $*.obj $*.lst
 
-# ƒRƒ}ƒ“ƒh
+# ï¿½Rï¿½}ï¿½ï¿½ï¿½h
 
 clean :
 	-$(DEL) asmhead.bin

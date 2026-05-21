@@ -1,3 +1,6 @@
+#ifndef BOOTPACK_H
+#define BOOTPACK_H
+
 /* asmhead.nas */
 struct BOOTINFO
 {                /* 0x0ff0-0x0fff */
@@ -321,3 +324,5 @@ int tek_decomp(unsigned char *p, char *q, int size);
 /* bootpack.c */
 struct TASK  *open_constask(struct SHEET *sht, unsigned int memtotal);
 struct SHEET *open_console(struct SHTCTL *shtctl, unsigned int memtotal);
+
+#endif
